@@ -58,7 +58,7 @@ unless (C4::Context->preference('WebBasedSelfCheck')) {
     exit;
 }
 
-if (C4::Context->preference('AutoSelfCheckAllowed')) 
+if (C4::Context->preference('AutoSelfCheckAllowed'))
 {
     my $AutoSelfCheckID = C4::Context->preference('AutoSelfCheckID');
     my $AutoSelfCheckPass = C4::Context->preference('AutoSelfCheckPass');
@@ -83,7 +83,7 @@ if (C4::Context->preference('SelfCheckoutByLogin'))
 
 # Get the self checkout timeout preference, or use 120 seconds as a default
 my $selfchecktimeout = 120000;
-if (C4::Context->preference('SelfCheckTimeout')) { 
+if (C4::Context->preference('SelfCheckTimeout')) {
     $selfchecktimeout = C4::Context->preference('SelfCheckTimeout') * 1000;
 }
 $template->param(SelfCheckTimeout => $selfchecktimeout);
@@ -114,7 +114,12 @@ if (C4::Context->preference('SelfCheckoutByLogin') && !$patronid) {
     my $resval;
     ($resval, $patronid) = checkpw($dbh, $patronlogin, $patronpw);
 }
-my $borrower = Koha::Patrons->find( { cardnumber => $patronid } )->unblessed;
+
+my $borrower;
+if ( $patronid ) {
+    $borrower = Koha::Patrons->find( { cardnumber => $patronid } );
+    $borrower = $borrower->unblessed if $borrower;
+}
 
 my $currencySymbol = "";
 if ( my $active_currency = Koha::Acquisition::Currencies->get_active ) {
@@ -131,10 +136,8 @@ if ($op eq "logout") {
 }
 elsif ( $op eq "returnbook" && $allowselfcheckreturns ) {
     my ($doreturn) = AddReturn( $barcode, $branch );
-    #warn "returnbook: " . $doreturn;
-    $borrower = Koha::Patrons->find( { cardnumber => $patronid } )->unblessed;
 }
-elsif ( $op eq "checkout" ) {
+elsif ( $borrower and $op eq "checkout" ) {
     my $impossible  = {};
     my $needconfirm = {};
     ( $impossible, $needconfirm ) = CanBookBeIssued(
@@ -250,7 +253,7 @@ elsif ( $op eq "checkout" ) {
     }
 } # $op
 
-if ($borrower->{cardnumber}) {
+if ($borrower) {
 #   warn "issuer's  branchcode: " .   $issuer->{branchcode};
 #   warn   "user's  branchcode: " . $borrower->{branchcode};
     my $borrowername = sprintf "%s %s", ($borrower->{firstname} || ''), ($borrower->{surname} || '');
